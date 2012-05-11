@@ -1,5 +1,32 @@
 <!DOCTYPE html>
+<!--
 
+INFO pour lire:
+
+Pour passer à la page suivante :
+- Fleche vers le bas
+- Fleche vers la droite
+- Page down
+
+Pour passer à la page précédente :
+- Fleche vers le haut
+- Fleche vers la gauche
+- Page up
+
+Pour aller à la fin de la presentation :
+- Fin (End)
+
+Pour aller au début de la presentation :
+- Debut (Home)
+
+Pour stopper/démarrer une vidéo (si présent sur la page)
+- Espace
+
+Pour passer plein écran :
+- F
+
+
+-->
 <meta charset="utf-8">
 <title>The Title Of Your Presentation</title>
 
@@ -39,7 +66,7 @@
 
 <section>
     <figure> <!-- Figures are used to display images and videos fullpage -->
-      <img src="http://placekitten.com/g/800/600">
+      
       <figcaption>An image</figcaption>
     </figure>
     <details>Kittens are so cute!</details>
@@ -47,7 +74,7 @@
 
 <section>
     <figure> <!-- Videos are automatically played -->
-      <video src="http://videos-cdn.mozilla.net/brand/Mozilla_Firefox_Manifesto_v0.2_640.webm" poster="http://www.mozilla.org/images/about/poster.jpg"></video>
+      
       <figcaption>A video</figcaption>
     </figure>
 </section>
@@ -60,11 +87,19 @@
 <!-- Define the style of your presentation -->
 
 <!-- Maybe a font from http://www.google.com/webfonts ? -->
-<link href='http://fonts.googleapis.com/css?family=Oswald' rel='stylesheet'>
+<!-- <link href='http://fonts.googleapis.com/css?family=Oswald' rel='stylesheet'> -->
 
 <style>
-  html, .view body { background-color: black; counter-reset: slideidx; }
-  body, .view section { background-color: white; border-radius: 12px }
+  html, .view body {
+    background-color: black; 
+    counter-reset: slideidx; 
+  }
+  
+  body, .view section { 
+    background-color: white;
+    border-radius: 12px;
+  }
+  
   /* A section is a slide. It's size is 800x600, and this will never change */
   section, .view head > title {
       /* The font from Google */
@@ -84,23 +119,29 @@
     text-align: center;
     margin: 1em 0 1em 0;
   }
-
-  h1, h2 {
+  
+  h1 {
     margin-top: 200px;
-    text-align: center;
+    margin-left: 100px;
     font-size: 80px;
   }
+  
+  h2 {
+    margin-top: 200px;
+    margin-left: 100px;
+    font-size: 60px;
+  }
+  
   h3 {
-    margin: 100px 0 50px 100px;
+    margin: 20px 20px 20px 100px;
   }
 
   ul {
-      margin: 50px 200px;
+    margin: 50px 50px;
   }
 
   p {
-    margin: 75px;
-    font-size: 50px;
+    margin: 50px;
   }
 
   blockquote {
@@ -110,18 +151,20 @@
     font-size: 60px;
     padding: 50px;
   }
+  
   blockquote:before {
     content: open-quote;
   }
+  
   blockquote:after {
     content: close-quote;
   }
 
-  /* Figures are displayed full-page, with the caption
-     on top of the image/video */
+  /* Figures are displayed full-page, with the caption on top of the image/video */
   figure {
     background-color: black;
   }
+  
   figcaption {
     margin: 70px;
     font-size: 50px;
@@ -138,8 +181,7 @@
   }
 
   /* Transition effect */
-  /* Feel free to change the transition effect for original
-     animations. See here:
+  /* Feel free to change the transition effect for original animations. See here:
      https://developer.mozilla.org/en/CSS/CSS_transitions
      How to use CSS3 Transitions: */
   section {
@@ -148,6 +190,7 @@
     -ms-transition: left 400ms linear 0s;
     transition: left 400ms linear 0s;
   }
+  
   .view section {
     -moz-transition: none;
     -webkit-transition: none;
@@ -161,8 +204,10 @@
 
   /* Before */
   section { left: -150%; }
+  
   /* Now */
   section[aria-selected] { left: 0; }
+  
   /* After */
   section[aria-selected] ~ section { left: +150%; }
 
@@ -177,11 +222,32 @@
   /* The items to-be-selected */
   .incremental > *[aria-selected] ~ * { opacity: 0; }
 
-  /* The progressbar, at the bottom of the slides, show the global
-     progress of the presentation. */
+  /* The progressbar, at the bottom of the slides, show the global progress of the presentation. */
   #progress-bar {
     height: 2px;
     background: #AAA;
+  }
+  
+  #indicator {
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    background: red;
+    display: block;
+    height: 5px;
+    width: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+  }
+  
+  #page-number {
+    position: absolute;
+    right: 30px;
+    bottom: 20px;
+    display: block;
+    color: #999999;
+    font-size: 10px;
   }
 </style>
 
@@ -199,7 +265,14 @@
 #
 -->
 
+<!-- Page number -->
+<span id="page-number"></span>
+
+<!-- Progress Bar -->
 <div id="progress-bar"></div>
+
+<!-- Online/Offline indicator -->
+<span id="indicator"></span>
 
 <!-- Default Style -->
 <style>
@@ -274,6 +347,7 @@
   }
 </style>
 
+<script language="javascript" type="text/javascript" src="js/socket.io.js"></script>
 <script>
   var Dz = {
     remoteWindows: [],
@@ -282,21 +356,81 @@
     html: null,
     slides: null,
     progressBar : null,
+    pageNumber : null,
     params: {
       autoplay: "1"
-    }
+    },
+    socket: null,
+    list: [],
   };
+  
+  Dz.updateList = function(list){
+    this.list = list;
+    // Now notify each window that we have a list update
+    this.remoteWindows.forEach(function(win) {
+      Dz.postMsg(win, "LIST", JSON.stringify(Dz.list));
+    });
+  }
+  
+  Dz.updateIndicator = function () {
+    $("#indicator").style.backgroundColor = this.socket ? 'green' : 'red';
+  }
+  
+  Dz.connect = function() {
+    try {
+      this.socket = io.connect('http://10.194.109.56:80');
+      this.socket.on('message', function(event){Dz.handleMessage(event);})
+    } catch(e) {
+      /*
+      try {
+          this.socket = new WebSocket("ws://10.194.109.56.rd.francetelecom.fr");
+      } catch (e) {
+          this.socket = new MozWebSocket("ws://10.194.109.56.rd.francetelecom.fr");
+      }
+      */
+      // TODO: show an Oups message to tell the guy that his browser is not WebSocket compatible
+      alert("error" + e);
+    }
+    this.updateIndicator();
+  }
+  
+  Dz.disconnect = function() {
+    this.socket.disconnect();
+    this.socket = null;
+    this.updateIndicator();
+  }
+  
+  Dz.handleMessage = function(msg){
+    msg = JSON.parse(msg);
+    if (msg.type == "id"){
+      this.socket.connID = msg.id;
+      login = window.prompt("What is your name?");
+      this.send({login: login});
+    }
+    else if (msg.type == "data")
+      this.onmessage(msg);
+    else if (msg.type == "list"){
+      this.updateList(msg.list);
+    }
+  }
+  
+  Dz.send = function(data){
+    var msg = {'id': this.socket.connID, 'data': data};
+    this.socket.send(JSON.stringify(msg));
+  }
 
   Dz.init = function() {
     document.body.className = "loaded";
     this.slides = Array.prototype.slice.call($$("body > section"));
     this.progressBar = $("#progress-bar");
+    this.pageNumber = $("#page-number");
     this.html = document.body.parentNode;
     this.setupParams();
     this.onhashchange();
     this.setupTouchEvents();
     this.onresize();
     this.setupView();
+    //this.connect();
   }
 
   Dz.setupParams = function() {
@@ -351,6 +485,18 @@
     if (aEvent.keyCode == 79) { // o
       aEvent.preventDefault();
       this.toggleView();
+    }
+    if (aEvent.keyCode == 80) { // p
+      aEvent.preventDefault();
+      if (this.socket)
+        this.send("MASTER");
+    }
+    if (aEvent.keyCode == 67) { // c
+      aEvent.preventDefault();
+      if (this.socket)
+        this.disconnect();
+      else
+        this.connect();
     }
   }
 
@@ -490,6 +636,8 @@
     for (var i = 0; i < this.remoteWindows.length; i++) {
       this.postMsg(this.remoteWindows[i], "CURSOR", this.idx + "." + this.step);
     }
+    if (this.socket)
+      this.send("SET_CURSOR " + this.idx + "." + this.step);
   }
 
   Dz.back = function() {
@@ -607,6 +755,7 @@
         slideSize = 100 / (this.slides.length - 1),
         stepSize = slideSize / steps;
     this.progressBar.style.width = ((aIdx - 1) * slideSize + aStep * stepSize) + '%';
+    this.pageNumber.textContent = (aIdx) + '/' + this.slides.length;
   }
   
   Dz.postMsg = function(aWin, aMsg) { // [arg0, [arg1...]]

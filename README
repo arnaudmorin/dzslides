@@ -8,7 +8,9 @@ Yo,
 
     * 'shells/embedder.html' to embed a presentation in a web page
     * 'shells/onstage.html' to show your slides with a control panel
+    * 'shells/prez.html' is based on embedder with functionnalities to
+       collect informations from WebSocket
 
     For a complete presentation, see: http://paulrouget.com/dzslides.
 
--- @paulrouget
+-- @paulrouget @arnaudmorin
